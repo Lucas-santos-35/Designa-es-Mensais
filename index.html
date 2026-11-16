@@ -1,0 +1,2143 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Designações</title>
+    
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#312e81">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Designações">
+    
+    <!-- Favicon & Apple Touch Icon Embutido -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='110' fill='%23312e81'/%3E%3Crect x='112' y='140' width='288' height='260' rx='28' fill='%23ffffff'/%3E%3Cpath d='M112 140 h288 v72 h-288 Z' fill='%234f46e5'/%3E%3Crect x='170' y='100' width='28' height='60' rx='14' fill='%23fbbf24'/%3E%3Crect x='314' y='100' width='28' height='60' rx='14' fill='%23fbbf24'/%3E%3Crect x='160' y='252' width='192' height='18' rx='9' fill='%2394a3b8'/%3E%3Crect x='160' y='296' width='192' height='18' rx='9' fill='%23cbd5e1'/%3E%3Crect x='160' y='340' width='120' height='18' rx='9' fill='%23cbd5e1'/%3E%3C/svg%3E">
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- jsPDF & AutoTable para download direto de PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        @media print {
+            @page {
+                size: A4 landscape;
+                margin: 8mm;
+            }
+            .no-print {
+                display: none !important;
+            }
+            .print-only {
+                display: block !important;
+            }
+            body {
+                background: white !important;
+                color: #000 !important;
+                font-size: 10pt;
+            }
+            #schedule-container {
+                border: 1px solid #cbd5e1 !important;
+                box-shadow: none !important;
+                width: 100% !important;
+            }
+            table {
+                width: 100% !important;
+                border-collapse: collapse !important;
+            }
+            th, td {
+                border: 1px solid #94a3b8 !important;
+                padding: 6px 8px !important;
+                font-size: 9.5pt !important;
+            }
+            thead th {
+                background-color: #f1f5f9 !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+            .shadow-sm, .shadow-md, .shadow-xl {
+                box-shadow: none !important;
+            }
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            height: 6px;
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        @keyframes slideInRight {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        .toast-enter {
+            animation: slideInRight 0.25s ease-out forwards;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
+
+    <!-- Container de Notificações Toast -->
+    <div id="toast-container" class="fixed bottom-4 right-4 z-[60] flex flex-col gap-2 max-w-sm w-full pointer-events-none px-4 sm:px-0"></div>
+
+    <!-- Navigation Header -->
+    <header class="bg-indigo-900 text-white shadow-md no-print sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center space-x-2.5 sm:space-x-3">
+                    <div class="p-2 bg-indigo-700 rounded-xl shadow-inner">
+                        <i data-lucide="calendar" class="w-5 h-5 sm:w-6 sm:h-6 text-indigo-200"></i>
+                    </div>
+                    <div>
+                        <h1 class="font-bold text-base sm:text-lg leading-tight flex items-center gap-2">
+                            Designações
+                        </h1>
+                        <p class="text-[11px] sm:text-xs text-indigo-200 hidden xs:block">Organização de Reuniões</p>
+                    </div>
+                </div>
+                
+                <!-- Navigation Tabs -->
+                <nav class="flex items-center space-x-1 sm:space-x-1.5">
+                    <!-- Status do Responsável -->
+                    <button onclick="toggleAdminLock()" id="admin-status-btn" class="px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 bg-amber-500/20 text-amber-200 border border-amber-400/30 hover:bg-amber-500/30 transition-all" title="Clique para alternar modo responsável">
+                        <i id="admin-lock-icon" data-lucide="lock" class="w-3.5 h-3.5 text-amber-300"></i>
+                        <span id="admin-status-text" class="hidden md:inline">Restrito</span>
+                    </button>
+
+                    <button onclick="switchTab('schedule')" id="tab-schedule" class="tab-btn px-2.5 sm:px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors flex items-center gap-1.5 bg-indigo-800 text-white">
+                        <i data-lucide="sparkles" class="w-4 h-4 text-amber-300"></i> <span class="hidden sm:inline">Designações</span>
+                    </button>
+                    <button onclick="switchTab('brothers')" id="tab-brothers" class="tab-btn px-2.5 sm:px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors flex items-center gap-1.5 text-indigo-200 hover:bg-indigo-800 hover:text-white">
+                        <i data-lucide="users" class="w-4 h-4"></i> <span class="hidden sm:inline">Irmãos</span>
+                    </button>
+                    <button onclick="switchTab('roles')" id="tab-roles" class="tab-btn px-2.5 sm:px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors flex items-center gap-1.5 text-indigo-200 hover:bg-indigo-800 hover:text-white">
+                        <i data-lucide="list-checks" class="w-4 h-4"></i> <span class="hidden sm:inline">Funções</span>
+                    </button>
+                    
+                    <button onclick="openApiKeyModal()" class="p-2 text-indigo-200 hover:text-white hover:bg-indigo-800 rounded-lg transition-colors ml-0.5" title="Configurações, Senha e Backup">
+                        <i data-lucide="settings" class="w-4 h-4"></i>
+                    </button>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-6 space-y-6">
+
+        <!-- TAB 1: GERAR DESIGNAÇÕES E VISUALIZAÇÃO -->
+        <section id="view-schedule" class="tab-content space-y-6">
+            <!-- Parameters Box -->
+            <div class="bg-white p-5 sm:p-6 rounded-xl shadow-sm border border-slate-200 no-print">
+                <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
+                    <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+                        <i data-lucide="sliders" class="w-5 h-5 text-indigo-600"></i> Designações Mensais
+                    </h2>
+                    <div class="flex items-center gap-2">
+                        <span id="saved-badge" class="text-[11px] text-emerald-700 font-medium bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200 flex items-center gap-1">
+                            <i data-lucide="check-circle-2" class="w-3.5 h-3.5"></i> Salvo localmente
+                        </span>
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold uppercase text-slate-500 mb-1">Mês</label>
+                        <select id="schedule-month" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                            <option value="0">Janeiro</option>
+                            <option value="1">Fevereiro</option>
+                            <option value="2">Março</option>
+                            <option value="3">Abril</option>
+                            <option value="4">Maio</option>
+                            <option value="5">Junho</option>
+                            <option value="6">Julho</option>
+                            <option value="7" selected>Agosto</option>
+                            <option value="8">Setembro</option>
+                            <option value="9">Outubro</option>
+                            <option value="10">Novembro</option>
+                            <option value="11">Dezembro</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold uppercase text-slate-500 mb-1">Ano</label>
+                        <input type="number" id="schedule-year" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none" value="2026">
+                    </div>
+
+                    <div class="sm:col-span-2">
+                        <label class="block text-xs font-semibold uppercase text-slate-500 mb-1">Dias de Reunião</label>
+                        <div class="flex flex-wrap gap-3 pt-1.5">
+                            <label class="inline-flex items-center text-sm cursor-pointer bg-slate-50 px-2.5 py-1 rounded-lg border border-slate-200 hover:bg-indigo-50/50">
+                                <input type="checkbox" value="3" class="meeting-day rounded text-indigo-600 focus:ring-indigo-500" checked>
+                                <span class="ml-2 text-slate-700 font-medium">Quarta</span>
+                            </label>
+                            <label class="inline-flex items-center text-sm cursor-pointer bg-slate-50 px-2.5 py-1 rounded-lg border border-slate-200 hover:bg-indigo-50/50">
+                                <input type="checkbox" value="4" class="meeting-day rounded text-indigo-600 focus:ring-indigo-500">
+                                <span class="ml-2 text-slate-700 font-medium">Quinta</span>
+                            </label>
+                            <label class="inline-flex items-center text-sm cursor-pointer bg-slate-50 px-2.5 py-1 rounded-lg border border-slate-200 hover:bg-indigo-50/50">
+                                <input type="checkbox" value="6" class="meeting-day rounded text-indigo-600 focus:ring-indigo-500" checked>
+                                <span class="ml-2 text-slate-700 font-medium">Sábado</span>
+                            </label>
+                            <label class="inline-flex items-center text-sm cursor-pointer bg-slate-50 px-2.5 py-1 rounded-lg border border-slate-200 hover:bg-indigo-50/50">
+                                <input type="checkbox" value="0" class="meeting-day rounded text-indigo-600 focus:ring-indigo-500">
+                                <span class="ml-2 text-slate-700 font-medium">Domingo</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-5 flex flex-wrap gap-3 items-center justify-between border-t border-slate-100 pt-4">
+                    <div class="text-xs text-slate-500 flex items-center gap-1.5">
+                        <i data-lucide="info" class="w-4 h-4 text-indigo-500 shrink-0"></i>
+                        <span>Balanceamento equitativo automático com respeito a escalas 12x36 e restrições.</span>
+                    </div>
+                    <button onclick="generateSchedule()" class="w-full sm:w-auto px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg shadow transition-all duration-150 flex items-center justify-center gap-2">
+                        <i data-lucide="wand2" class="w-4 h-4"></i> Gerar Nova Escala
+                    </button>
+                </div>
+            </div>
+
+            <!-- AI Banner Header (Print & Preview) -->
+            <div id="ai-banner-container" class="hidden bg-white rounded-xl overflow-hidden shadow-sm border border-slate-200">
+                <div class="relative max-h-48 overflow-hidden bg-indigo-950 flex items-center justify-center">
+                    <img id="ai-banner-img" src="" alt="Banner Bíblico" class="w-full object-cover opacity-90">
+                    <div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent flex items-end p-4">
+                        <p id="ai-banner-caption" class="text-white text-xs sm:text-sm italic font-light drop-shadow"></p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Schedule Output Table Card -->
+            <div id="schedule-container" class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="p-4 sm:p-6 border-b border-slate-200 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                    <div>
+                        <h3 id="schedule-title" class="text-lg sm:text-xl font-bold text-slate-900">Designações do Mês</h3>
+                        <p class="text-xs text-slate-500 no-print mt-0.5">Toque em qualquer nome na tabela para substituir manualmente.</p>
+                    </div>
+                    
+                    <div class="flex flex-wrap items-center gap-2 no-print">
+                        <button onclick="openStatsModal()" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-colors">
+                            <i data-lucide="bar-chart-2" class="w-4 h-4 text-indigo-600"></i> Estatísticas
+                        </button>
+                        <button onclick="openWhatsAppModal()" class="px-3 py-2 bg-green-50 hover:bg-green-100 text-green-700 border border-green-200 text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-colors">
+                            <i data-lucide="message-square" class="w-4 h-4 text-green-600"></i> WhatsApp
+                        </button>
+                        <button onclick="triggerPrintPdf()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg shadow-sm flex items-center gap-1.5 transition-colors">
+                            <i data-lucide="file-down" class="w-4 h-4"></i> Baixar PDF
+                        </button>
+                        <button onclick="window.print()" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-colors" title="Imprimir direto">
+                            <i data-lucide="printer" class="w-4 h-4 text-slate-600"></i> Imprimir
+                        </button>
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto custom-scrollbar">
+                    <table class="w-full border-collapse text-sm text-left">
+                        <thead id="schedule-thead" class="bg-slate-100 border-b border-slate-200 text-slate-700 font-semibold text-xs">
+                        </thead>
+                        <tbody id="schedule-tbody" class="divide-y divide-slate-200">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 3: CADASTRO DE IRMÃOS -->
+        <section id="view-brothers" class="tab-content hidden space-y-6">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                <div>
+                    <h2 class="text-xl font-bold text-slate-900">Cadastro de Irmãos</h2>
+                    <p class="text-sm text-slate-500">Gerencie a lista de participantes, telefones e escalas de trabalho.</p>
+                </div>
+                <div class="flex flex-wrap items-center gap-2">
+                    <div class="relative flex-1 sm:flex-initial">
+                        <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
+                        <input type="text" id="brother-search" oninput="renderBrothersList()" placeholder="Buscar irmão..." class="w-full sm:w-56 pl-9 pr-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-xs sm:text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                    </div>
+                    <button onclick="openBrotherModal()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-xs sm:text-sm rounded-lg shadow-sm flex items-center gap-2">
+                        <i data-lucide="user-plus" class="w-4 h-4"></i> Novo Irmão
+                    </button>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-50 border-b border-slate-200 text-xs uppercase font-semibold text-slate-500">
+                                <th class="py-3.5 px-4">Nome</th>
+                                <th class="py-3.5 px-4">WhatsApp</th>
+                                <th class="py-3.5 px-4">Funções Habilitadas</th>
+                                <th class="py-3.5 px-4">Restrições / Escala</th>
+                                <th class="py-3.5 px-4 text-right">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="brothers-list" class="divide-y divide-slate-200 text-sm">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 4: CADASTRO DE FUNÇÕES -->
+        <section id="view-roles" class="tab-content hidden space-y-4">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-white p-4 sm:p-5 rounded-xl shadow-sm border border-slate-200">
+                <div>
+                    <h2 class="text-lg font-bold text-slate-900">Funções da Reunião</h2>
+                    <p class="text-xs text-slate-500">Defina os postos a serem preenchidos na escala.</p>
+                </div>
+                <button onclick="openRoleModal()" class="inline-flex items-center justify-center px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-xs sm:text-sm rounded-lg shadow-sm gap-1.5">
+                    <i data-lucide="plus-circle" class="w-4 h-4"></i> Nova Função
+                </button>
+            </div>
+
+            <div id="roles-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+            </div>
+        </section>
+
+    </main>
+
+    <!-- MODAL: Configurações, Senha e Backup -->
+    <div id="modal-api-key" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+        <div class="bg-white rounded-xl shadow-xl max-w-md w-full overflow-hidden">
+            <div class="px-6 py-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
+                <h3 class="font-bold text-slate-900 flex items-center gap-2">
+                    <i data-lucide="settings" class="w-4 h-4 text-indigo-600"></i> Configurações e Backup
+                </h3>
+                <button onclick="closeApiKeyModal()" class="text-slate-400 hover:text-slate-600">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <div class="p-6 space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-slate-500 mb-1">Senha do Responsável</label>
+                    <input type="password" id="user-admin-password" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none" placeholder="••••••••">
+                </div>
+                <div class="border-t border-slate-200 pt-4">
+                    <label class="block text-xs font-semibold uppercase text-slate-500 mb-2">Backup dos Dados</label>
+                    <div class="flex gap-2">
+                        <button onclick="exportBackup()" class="flex-1 py-2 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg flex items-center justify-center gap-1.5">
+                            <i data-lucide="download" class="w-3.5 h-3.5"></i> Exportar JSON
+                        </button>
+                        <label class="flex-1 py-2 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg flex items-center justify-center gap-1.5 cursor-pointer">
+                            <i data-lucide="upload" class="w-3.5 h-3.5"></i> Importar JSON
+                            <input type="file" accept=".json" onchange="importBackup(event)" class="hidden">
+                        </label>
+                    </div>
+                </div>
+            </div>
+            <div class="px-6 py-3 border-t border-slate-200 bg-slate-50 flex justify-end gap-2">
+                <button onclick="closeApiKeyModal()" class="px-4 py-2 border border-slate-300 rounded-lg text-sm text-slate-700 hover:bg-slate-100">Cancelar</button>
+                <button onclick="saveApiKey()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium">Salvar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: Confirmação Personalizada -->
+    <div id="modal-confirm" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[55] flex items-center justify-center hidden p-4">
+        <div class="bg-white rounded-xl shadow-xl max-w-sm w-full overflow-hidden">
+            <div class="p-6 space-y-3">
+                <div class="w-10 h-10 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center">
+                    <i data-lucide="alert-triangle" class="w-5 h-5"></i>
+                </div>
+                <h3 class="font-bold text-slate-900 text-base" id="confirm-title">Confirmar Ação</h3>
+                <p id="confirm-message" class="text-xs text-slate-600 leading-relaxed"></p>
+            </div>
+            <div class="px-6 py-3 border-t border-slate-200 bg-slate-50 flex justify-end gap-2">
+                <button onclick="closeConfirmModal()" class="px-4 py-2 border border-slate-300 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-100">Cancelar</button>
+                <button id="confirm-accept-btn" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold">Confirmar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: Validação de Senha do Responsável -->
+    <div id="modal-auth" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+        <div class="bg-white rounded-xl shadow-xl max-w-sm w-full overflow-hidden">
+            <div class="px-6 py-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
+                <h3 class="font-bold text-slate-900 flex items-center gap-2">
+                    <i data-lucide="shield-alert" class="w-4 h-4 text-amber-600"></i> Senha do Responsável
+                </h3>
+                <button onclick="closeAuthModal()" class="text-slate-400 hover:text-slate-600">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <div class="p-6 space-y-4">
+                <p class="text-xs text-slate-600 leading-relaxed">Digite a senha do responsável para liberar edições.</p>
+                <div>
+                    <input type="password" id="input-admin-password" onkeydown="if(event.key==='Enter') verifyAdminPassword()" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none" placeholder="••••••••">
+                    <p id="auth-error-msg" class="text-xs text-rose-600 mt-1.5 hidden font-medium">Senha incorreta. Tente novamente.</p>
+                </div>
+            </div>
+            <div class="px-6 py-3 border-t border-slate-200 bg-slate-50 flex justify-end gap-2">
+                <button onclick="closeAuthModal()" class="px-4 py-2 border border-slate-300 rounded-lg text-sm text-slate-700 hover:bg-slate-100">Cancelar</button>
+                <button onclick="verifyAdminPassword()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium">Liberar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: Envio de Mensagens via WhatsApp -->
+    <div id="modal-whatsapp" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4 no-print">
+        <div class="bg-white rounded-xl shadow-xl max-w-2xl w-full overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="px-6 py-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
+                <h3 class="font-bold text-slate-900 flex items-center gap-2">
+                    <i data-lucide="message-square" class="w-5 h-5 text-green-600"></i> Comunicados para WhatsApp
+                </h3>
+                <button onclick="closeWhatsAppModal()" class="text-slate-400 hover:text-slate-600">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <div class="border-b border-slate-200 bg-slate-100/70 px-6 pt-3 flex gap-4 text-xs font-semibold">
+                <button onclick="switchWaTab('group')" id="wa-tab-group" class="pb-2 border-b-2 border-green-600 text-green-700 font-bold flex items-center gap-1.5">
+                    <i data-lucide="users" class="w-4 h-4"></i> Aviso do Grupo
+                </button>
+                <button onclick="switchWaTab('individual')" id="wa-tab-individual" class="pb-2 border-b-2 border-transparent text-slate-500 hover:text-slate-800 flex items-center gap-1.5">
+                    <i data-lucide="user-check" class="w-4 h-4"></i> Lembrete Individual
+                </button>
+            </div>
+
+            <div class="p-6 overflow-y-auto space-y-4">
+                <div id="wa-content-group" class="space-y-4">
+                    <textarea id="wa-group-text" class="w-full h-60 font-mono text-xs p-3 border border-slate-300 rounded-lg bg-slate-50 focus:ring-2 focus:ring-green-500 focus:outline-none"></textarea>
+                    
+                    <div class="flex flex-wrap items-center justify-between gap-3 pt-2">
+                        <button onclick="copyWaGroupText()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg flex items-center gap-2">
+                            <i data-lucide="copy" class="w-4 h-4"></i> Copiar Texto
+                        </button>
+                        <button onclick="sendWaGroupMessage()" class="px-5 py-2 bg-green-600 hover:bg-green-700 text-white text-xs font-bold rounded-lg shadow flex items-center gap-2">
+                            <i data-lucide="send" class="w-4 h-4"></i> Abrir WhatsApp
+                        </button>
+                    </div>
+                </div>
+
+                <div id="wa-content-individual" class="hidden space-y-4">
+                    <div id="wa-individual-list" class="divide-y divide-slate-200 border border-slate-200 rounded-lg max-h-72 overflow-y-auto bg-slate-50">
+                    </div>
+                </div>
+            </div>
+
+            <div class="px-6 py-3 border-t border-slate-200 bg-slate-50 flex justify-end">
+                <button onclick="closeWhatsAppModal()" class="px-4 py-2 border border-slate-300 text-slate-700 hover:bg-slate-100 rounded-lg text-xs font-semibold">
+                    Fechar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: Estatísticas -->
+    <div id="modal-stats" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+        <div class="bg-white rounded-xl shadow-xl max-w-2xl w-full overflow-hidden flex flex-col max-h-[85vh]">
+            <div class="px-6 py-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
+                <h3 class="font-bold text-slate-900 flex items-center gap-2">
+                    <i data-lucide="bar-chart-2" class="w-5 h-5 text-indigo-600"></i> Estatísticas e Distribuição do Mês
+                </h3>
+                <button onclick="closeStatsModal()" class="text-slate-400 hover:text-slate-600">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <div class="p-6 overflow-y-auto">
+                <div id="stats-container" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                </div>
+            </div>
+            <div class="px-6 py-3 border-t border-slate-200 bg-slate-50 flex justify-end">
+                <button onclick="closeStatsModal()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold">
+                    Fechar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: Substituição Individual -->
+    <div id="modal-swap" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+        <div class="bg-white rounded-xl shadow-xl max-w-md w-full overflow-hidden">
+            <div class="px-6 py-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
+                <h3 class="font-bold text-slate-900">Alterar Designação</h3>
+                <button onclick="closeSwapModal()" class="text-slate-400 hover:text-slate-600">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <div class="p-6 space-y-4">
+                <p id="swap-subtitle" class="text-xs text-indigo-700 font-semibold bg-indigo-50 p-2.5 rounded-lg border border-indigo-100"></p>
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-slate-500 mb-1">Selecione o Substituto</label>
+                    <select id="swap-select" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                    </select>
+                </div>
+            </div>
+            <div class="px-6 py-3 border-t border-slate-200 bg-slate-50 flex justify-end gap-2">
+                <button onclick="closeSwapModal()" class="px-4 py-2 border border-slate-300 rounded-lg text-sm text-slate-700 hover:bg-slate-100">Cancelar</button>
+                <button onclick="confirmSwap()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium">Salvar Alteração</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: Cadastro de Irmão -->
+    <div id="modal-brother" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+        <div class="bg-white rounded-xl shadow-xl max-w-lg w-full overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="px-6 py-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
+                <h3 id="modal-brother-title" class="font-bold text-slate-900">Cadastrar Irmão</h3>
+                <button onclick="closeBrotherModal()" class="text-slate-400 hover:text-slate-600">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <div class="p-6 overflow-y-auto space-y-4">
+                <input type="hidden" id="brother-id">
+                
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-slate-500 mb-1">Nome Completo</label>
+                    <input type="text" id="brother-name" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none" placeholder="Ex: João Silva">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-slate-500 mb-1">WhatsApp / Telefone (com DDD)</label>
+                    <input type="tel" id="brother-phone" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none" placeholder="Ex: 31999998888">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-slate-500 mb-1">Funções Habilitadas</label>
+                    <div id="brother-roles-checkboxes" class="grid grid-cols-2 gap-2 p-3 bg-slate-50 rounded-lg border border-slate-200 max-h-40 overflow-y-auto">
+                    </div>
+                </div>
+
+                <!-- Configuração de Escala 12x36 -->
+                <div class="bg-amber-50/70 border border-amber-200 rounded-lg p-3 space-y-2.5">
+                    <label class="inline-flex items-center text-xs font-bold text-amber-900 cursor-pointer">
+                        <input type="checkbox" id="brother-shift-enabled" onchange="toggleShiftFields()" class="rounded text-amber-600 focus:ring-amber-500">
+                        <span class="ml-2">Trabalha em Escala 12x36 (Bloqueia dias de plantão)</span>
+                    </label>
+                    <div id="brother-shift-fields" class="hidden grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                        <div>
+                            <label class="block text-[11px] font-semibold text-slate-600 mb-1">Data de um Plantão (Base)</label>
+                            <input type="date" id="brother-shift-ref" class="w-full border border-slate-300 bg-white rounded-lg px-2.5 py-1.5 text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-semibold text-slate-600 mb-1">Escopo do Bloqueio</label>
+                            <select id="brother-shift-scope" class="w-full border border-slate-300 bg-white rounded-lg px-2.5 py-1.5 text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                                <option value="audio">Apenas Som / Áudio</option>
+                                <option value="all">Todas as funções</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-slate-500 mb-1">Observações Gerais</label>
+                    <input type="text" id="brother-restrictions" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none" placeholder="Ex: Viaja nas quintas, habilitado para som, etc.">
+                </div>
+            </div>
+            <div class="px-6 py-3 border-t border-slate-200 bg-slate-50 flex justify-end gap-2">
+                <button onclick="closeBrotherModal()" class="px-4 py-2 border border-slate-300 rounded-lg text-sm text-slate-700 hover:bg-slate-100">Cancelar</button>
+                <button onclick="saveBrother()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium">Salvar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: Cadastro de Função -->
+    <div id="modal-role" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+        <div class="bg-white rounded-xl shadow-xl max-w-sm w-full overflow-hidden">
+            <div class="px-6 py-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
+                <h3 id="modal-role-title" class="font-bold text-slate-900">Nova Função</h3>
+                <button onclick="closeRoleModal()" class="text-slate-400 hover:text-slate-600">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <div class="p-6 space-y-4">
+                <input type="hidden" id="role-id">
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-slate-500 mb-1">Nome da Função</label>
+                    <input type="text" id="role-name" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none" placeholder="Ex: MULTIMÍDIA">
+                </div>
+            </div>
+            <div class="px-6 py-3 border-t border-slate-200 bg-slate-50 flex justify-end gap-2">
+                <button onclick="closeRoleModal()" class="px-4 py-2 border border-slate-300 rounded-lg text-sm text-slate-700 hover:bg-slate-100">Cancelar</button>
+                <button onclick="saveRole()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium">Salvar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const STORAGE_KEYS = {
+            ROLES: 'designacoes_roles_v3',
+            BROTHERS: 'designacoes_brothers_v3',
+            SCHEDULE: 'designacoes_schedule_v3',
+            API_KEY: 'gemini_api_key',
+            ADMIN_PASS: 'admin_password'
+        };
+
+        let state = {
+            roles: [
+                { id: 'r1', name: 'INDICADOR ENTRADA' },
+                { id: 'r2', name: 'INDICADOR SALÃO' },
+                { id: 'r3', name: 'MICROFONE 1' },
+                { id: 'r4', name: 'MICROFONE 2' },
+                { id: 'r5', name: 'SOM / ÁUDIO' }
+            ],
+            brothers: [],
+            schedule: null,
+            customApiKey: localStorage.getItem(STORAGE_KEYS.API_KEY) || '',
+            adminPassword: localStorage.getItem(STORAGE_KEYS.ADMIN_PASS) || '1234',
+            isUnlocked: false
+        };
+
+        let currentSwapTarget = null;
+        let pendingAdminAction = null;
+        let lastAiTextResponse = '';
+
+        // ==========================================
+        // NAVEGAÇÃO ENTRE ABAS
+        // ==========================================
+        function switchTab(tab) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.tab-btn').forEach(el => {
+                el.classList.remove('bg-indigo-800', 'text-white');
+                el.classList.add('text-indigo-200');
+            });
+
+            const targetView = document.getElementById(`view-${tab}`);
+            if (targetView) targetView.classList.remove('hidden');
+
+            const activeBtn = document.getElementById(`tab-${tab}`);
+            if (activeBtn) {
+                activeBtn.classList.add('bg-indigo-800', 'text-white');
+                activeBtn.classList.remove('text-indigo-200');
+            }
+
+            if (tab === 'brothers') renderBrothersList();
+            if (tab === 'roles') renderRolesGrid();
+            if (tab === 'schedule') renderScheduleTable();
+
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // ==========================================
+        // SISTEMA DE NOTIFICAÇÕES (TOAST) & CONFIRMAÇÃO
+        // ==========================================
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            if (!container) return;
+
+            const colors = {
+                success: 'bg-emerald-600 text-white border-emerald-700',
+                error: 'bg-rose-600 text-white border-rose-700',
+                warning: 'bg-amber-500 text-white border-amber-600',
+                info: 'bg-slate-800 text-white border-slate-900'
+            };
+
+            const icons = {
+                success: 'check-circle',
+                error: 'x-circle',
+                warning: 'alert-triangle',
+                info: 'info'
+            };
+
+            const toast = document.createElement('div');
+            toast.className = `toast-enter pointer-events-auto flex items-center gap-2.5 px-4 py-3 rounded-xl shadow-lg border text-xs font-medium ${colors[type] || colors.info}`;
+            toast.innerHTML = `
+                <i data-lucide="${icons[type] || 'info'}" class="w-4 h-4 shrink-0"></i>
+                <span class="flex-1">${escapeHtml(message)}</span>
+            `;
+
+            container.appendChild(toast);
+            if (window.lucide) lucide.createIcons();
+
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateX(100%)';
+                toast.style.transition = 'all 0.25s ease-in';
+                setTimeout(() => toast.remove(), 250);
+            }, 3500);
+        }
+
+        function showConfirmDialog(title, message, onConfirm) {
+            const modal = document.getElementById('modal-confirm');
+            document.getElementById('confirm-title').textContent = title;
+            document.getElementById('confirm-message').textContent = message;
+
+            const acceptBtn = document.getElementById('confirm-accept-btn');
+            const newBtn = acceptBtn.cloneNode(true);
+            acceptBtn.parentNode.replaceChild(newBtn, acceptBtn);
+
+            newBtn.addEventListener('click', () => {
+                closeConfirmModal();
+                if (typeof onConfirm === 'function') onConfirm();
+            });
+
+            modal.classList.remove('hidden');
+            if (window.lucide) lucide.createIcons();
+        }
+
+        function closeConfirmModal() {
+            document.getElementById('modal-confirm').classList.add('hidden');
+        }
+
+        // ==========================================
+        // PERSISTÊNCIA LOCAL (LOCALSTORAGE)
+        // ==========================================
+        function persistState() {
+            try {
+                localStorage.setItem(STORAGE_KEYS.ROLES, JSON.stringify(state.roles));
+                localStorage.setItem(STORAGE_KEYS.BROTHERS, JSON.stringify(state.brothers));
+                if (state.schedule) {
+                    const serializable = {
+                        ...state.schedule,
+                        dates: state.schedule.dates.map(d => d.toISOString())
+                    };
+                    localStorage.setItem(STORAGE_KEYS.SCHEDULE, JSON.stringify(serializable));
+                }
+            } catch (e) {
+                console.error('Erro ao salvar dados localmente:', e);
+            }
+        }
+
+        function getDefaultBrothersList() {
+            const names = [
+                "Abílio Brito", "Antônio José Ribeiro", "Eurípedes Fortunato",
+                "Fillipe Tito", "Gilmar Sales", "Heldes Luiz", "João Victor",
+                "Leonardo Vieira", "Lucas Alves", "Lucas Daniel", "Lucas Eduardo",
+                "Luiz Eduardo", "Márcio Barbosa", "Marco Antônio", "Maurício Batista",
+                "Naico Stéfano", "Paulo César Guedes", "Ricardo Gomes",
+                "Ronnie Rodrigues", "Valdemar Junio", "Vinícius Adriano", "Wátila Fernandes"
+            ];
+            const audioNames = ["Wátila Fernandes", "Lucas Alves", "Lucas Daniel", "Ronnie Rodrigues", "Vinícius Adriano"];
+
+            return names.map((name, idx) => {
+                const isAudio = audioNames.includes(name);
+                const isLucasDaniel = name === "Lucas Daniel";
+                return {
+                    id: 'b_init_' + (idx + 1),
+                    name,
+                    phone: '',
+                    roles: isAudio ? ['r1', 'r2', 'r3', 'r4', 'r5'] : ['r1', 'r2', 'r3', 'r4'],
+                    restrictions: isLucasDaniel ? 'Escala 12x36 - Som apenas nas folgas' : (isAudio ? 'Habilitado para Som / Áudio' : ''),
+                    shift12x36: isLucasDaniel,
+                    shiftRefDate: '2026-08-12',
+                    shiftScope: 'audio'
+                };
+            });
+        }
+
+        function loadPersistedState() {
+            try {
+                const savedRoles = localStorage.getItem(STORAGE_KEYS.ROLES);
+                const savedBrothers = localStorage.getItem(STORAGE_KEYS.BROTHERS);
+                const savedSchedule = localStorage.getItem(STORAGE_KEYS.SCHEDULE);
+
+                if (savedRoles) state.roles = JSON.parse(savedRoles);
+                if (savedBrothers) {
+                    state.brothers = JSON.parse(savedBrothers);
+                } else {
+                    state.brothers = getDefaultBrothersList();
+                    persistState();
+                }
+
+                if (savedSchedule) {
+                    const parsed = JSON.parse(savedSchedule);
+                    parsed.dates = parsed.dates.map(iso => new Date(iso));
+                    state.schedule = parsed;
+                }
+            } catch (e) {
+                state.brothers = getDefaultBrothersList();
+            }
+        }
+
+        // ==========================================
+        // VALIDAÇÃO DE DISPONIBILIDADE & ESCALA 12x36
+        // ==========================================
+        function isBrotherAvailableOnDate(brother, dateObj, roleId) {
+            if (!brother || !Array.isArray(brother.roles) || !brother.roles.includes(roleId)) {
+                return false;
+            }
+
+            if (brother.shift12x36 && brother.shiftRefDate) {
+                const appliesToRole = brother.shiftScope === 'all' || (brother.shiftScope === 'audio' && roleId === 'r5');
+                if (appliesToRole) {
+                    const [refY, refM, refD] = brother.shiftRefDate.split('-').map(Number);
+                    const refDate = new Date(refY, refM - 1, refD);
+                    const curDate = new Date(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate());
+                    const diffTime = curDate.getTime() - refDate.getTime();
+                    const diffDays = Math.round(diffTime / (1000 * 3600 * 24));
+                    if (Math.abs(diffDays) % 2 === 0) {
+                        return false;
+                    }
+                }
+            }
+            return true;
+        }
+
+        // ==========================================
+        // INICIALIZAÇÃO
+        // ==========================================
+        document.addEventListener('DOMContentLoaded', () => {
+            loadPersistedState();
+            lucide.createIcons();
+
+            renderBrothersList();
+            renderRolesGrid();
+            updateAdminLockUI();
+
+            if (state.schedule) {
+                document.getElementById('schedule-month').value = state.schedule.month;
+                document.getElementById('schedule-year').value = state.schedule.year;
+                renderScheduleTable();
+                renderStats();
+            } else {
+                const now = new Date();
+                document.getElementById('schedule-month').value = now.getMonth();
+                document.getElementById('schedule-year').value = now.getFullYear();
+                generateSchedule(true);
+            }
+        });
+
+        // ==========================================
+        // RENDERIZAÇÃO E GESTÃO DA LISTA DE IRMÃOS
+        // ==========================================
+        function toggleShiftFields() {
+            const enabled = document.getElementById('brother-shift-enabled').checked;
+            const fields = document.getElementById('brother-shift-fields');
+            if (enabled) {
+                fields.classList.remove('hidden');
+            } else {
+                fields.classList.add('hidden');
+            }
+        }
+
+        function renderBrothersList() {
+            const tbody = document.getElementById('brothers-list');
+            if (!tbody) return;
+
+            const searchInput = document.getElementById('brother-search');
+            const query = searchInput ? searchInput.value.trim().toLowerCase() : '';
+
+            const filtered = state.brothers.filter(b =>
+                b.name.toLowerCase().includes(query) ||
+                (b.restrictions && b.restrictions.toLowerCase().includes(query))
+            );
+
+            tbody.innerHTML = '';
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="py-10 px-4 text-center text-slate-500 text-sm">
+                            ${state.brothers.length === 0 
+                                ? 'Nenhum irmão cadastrado ainda. Clique em <strong>"Novo Irmão"</strong> acima para cadastrar.' 
+                                : 'Nenhum irmão encontrado para essa busca.'}
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            filtered.forEach(b => {
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-50 transition-colors';
+
+                const validRoles = (b.roles || [])
+                    .map(rId => state.roles.find(r => r.id === rId))
+                    .filter(Boolean);
+
+                const rolesHtml = validRoles.length > 0
+                    ? validRoles.map(r => `<span class="inline-block bg-indigo-50 text-indigo-700 border border-indigo-200/80 text-[11px] font-medium px-2 py-0.5 rounded-md mr-1 mb-1">${escapeHtml(r.name)}</span>`).join('')
+                    : '<span class="text-rose-600 text-xs font-medium italic">Nenhuma função marcada</span>';
+
+                let shiftBadge = '';
+                if (b.shift12x36) {
+                    shiftBadge = `<span class="inline-flex items-center gap-1 bg-amber-50 text-amber-800 border border-amber-200 text-[11px] font-semibold px-2 py-0.5 rounded-md mr-1">12x36 (${b.shiftScope === 'all' ? 'Geral' : 'Som'})</span>`;
+                }
+
+                tr.innerHTML = `
+                    <td class="py-3 px-4 font-semibold text-slate-900 whitespace-nowrap">${escapeHtml(b.name)}</td>
+                    <td class="py-3 px-4 text-xs text-slate-600 whitespace-nowrap">${b.phone ? escapeHtml(b.phone) : '<span class="text-slate-400">-</span>'}</td>
+                    <td class="py-3 px-4 max-w-xs">${rolesHtml}</td>
+                    <td class="py-3 px-4 text-xs text-slate-600">${shiftBadge}${b.restrictions ? escapeHtml(b.restrictions) : (!shiftBadge ? '-' : '')}</td>
+                    <td class="py-3 px-4 text-right whitespace-nowrap space-x-1">
+                        <button onclick="editBrother('${b.id}')" class="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors" title="Editar irmão">
+                            <i data-lucide="edit-3" class="w-4 h-4 inline"></i>
+                        </button>
+                        <button onclick="deleteBrother('${b.id}')" class="p-1.5 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors" title="Remover irmão">
+                            <i data-lucide="trash-2" class="w-4 h-4 inline"></i>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            lucide.createIcons();
+        }
+
+        // ==========================================
+        // AUTENTICAÇÃO DO RESPONSÁVEL
+        // ==========================================
+        function checkAdminAuth(callback) {
+            if (state.isUnlocked) {
+                callback();
+                return;
+            }
+            pendingAdminAction = callback;
+            document.getElementById('input-admin-password').value = '';
+            document.getElementById('auth-error-msg').classList.add('hidden');
+            document.getElementById('modal-auth').classList.remove('hidden');
+            setTimeout(() => document.getElementById('input-admin-password').focus(), 100);
+        }
+
+        function closeAuthModal() {
+            document.getElementById('modal-auth').classList.add('hidden');
+            pendingAdminAction = null;
+        }
+
+        function verifyAdminPassword() {
+            const inputPass = document.getElementById('input-admin-password').value;
+            if (inputPass === state.adminPassword) {
+                state.isUnlocked = true;
+                updateAdminLockUI();
+                closeAuthModal();
+                showToast('Modo responsável liberado!', 'success');
+                if (typeof pendingAdminAction === 'function') {
+                    const action = pendingAdminAction;
+                    pendingAdminAction = null;
+                    action();
+                }
+            } else {
+                document.getElementById('auth-error-msg').classList.remove('hidden');
+            }
+        }
+
+        function toggleAdminLock() {
+            if (state.isUnlocked) {
+                state.isUnlocked = false;
+                updateAdminLockUI();
+                showToast('Edição bloqueada novamente.', 'info');
+            } else {
+                checkAdminAuth(() => {});
+            }
+        }
+
+        function updateAdminLockUI() {
+            const icon = document.getElementById('admin-lock-icon');
+            const text = document.getElementById('admin-status-text');
+            const btn = document.getElementById('admin-status-btn');
+
+            if (state.isUnlocked) {
+                icon.setAttribute('data-lucide', 'unlock');
+                text.textContent = 'Liberado';
+                btn.className = "px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 bg-emerald-500/20 text-emerald-200 border border-emerald-400/30 hover:bg-emerald-500/30 transition-all";
+            } else {
+                icon.setAttribute('data-lucide', 'lock');
+                text.textContent = 'Restrito';
+                btn.className = "px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 bg-amber-500/20 text-amber-200 border border-amber-400/30 hover:bg-amber-500/30 transition-all";
+            }
+            lucide.createIcons();
+        }
+
+        function triggerPrintPdf() {
+            if (!state.schedule) {
+                showToast('Gere uma escala primeiro para baixar o PDF.', 'warning');
+                return;
+            }
+
+            try {
+                if (!window.jspdf || !window.jspdf.jsPDF) {
+                    showToast('Biblioteca de PDF carregando, tentando impressão padrão...', 'info');
+                    window.print();
+                    return;
+                }
+
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF({
+                    orientation: 'landscape',
+                    unit: 'mm',
+                    format: 'a4'
+                });
+
+                const monthNames = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+                const weekDays = ["DOMINGO", "SEGUNDA", "TERÇA", "QUARTA", "QUINTA", "SEXTA", "SÁBADO"];
+
+                const docTitle = `Designações - ${monthNames[state.schedule.month]} e ${state.schedule.year}`;
+
+                // Cabeçalho decorativo
+                doc.setFillColor(49, 46, 129); // Indigo-900
+                doc.rect(14, 12, 269, 16, 'F');
+
+                doc.setTextColor(255, 255, 255);
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(14);
+                doc.text(docTitle.toUpperCase(), 20, 22);
+
+                doc.setFont('helvetica', 'normal');
+                doc.setFontSize(9);
+                doc.text('Organização de Reuniões', 277, 22, { align: 'right' });
+
+                // Montagem das colunas e linhas da tabela
+                const head = [[
+                    'DIA / DATA',
+                    ...state.roles.map(r => r.name.toUpperCase())
+                ]];
+
+                const body = state.schedule.dates.map(d => {
+                    const dateKey = d.toISOString().split('T')[0];
+                    const dayNum = String(d.getDate()).padStart(2, '0');
+                    const monthNum = String(d.getMonth() + 1).padStart(2, '0');
+                    const weekName = weekDays[d.getDay()].substring(0, 6);
+
+                    const row = [`${weekName} - ${dayNum}/${monthNum}`];
+
+                    state.roles.forEach(role => {
+                        const bId = state.schedule.grid[dateKey]?.[role.id];
+                        const brother = state.brothers.find(b => b.id === bId);
+                        row.push(brother ? brother.name : 'VAGO');
+                    });
+
+                    return row;
+                });
+
+                doc.autoTable({
+                    head: head,
+                    body: body,
+                    startY: 33,
+                    margin: { left: 14, right: 14 },
+                    theme: 'grid',
+                    styles: {
+                        font: 'helvetica',
+                        fontSize: 9.5,
+                        cellPadding: 3.5,
+                        textColor: [30, 41, 59],
+                        lineColor: [203, 213, 225],
+                        lineWidth: 0.25,
+                        halign: 'center',
+                        valign: 'middle'
+                    },
+                    headStyles: {
+                        fillColor: [241, 245, 249],
+                        textColor: [15, 23, 42],
+                        fontStyle: 'bold',
+                        fontSize: 9,
+                        halign: 'center'
+                    },
+                    columnStyles: {
+                        0: {
+                            fontStyle: 'bold',
+                            fillColor: [248, 250, 252],
+                            halign: 'left',
+                            cellWidth: 38
+                        }
+                    },
+                    alternateRowStyles: {
+                        fillColor: [252, 253, 255]
+                    },
+                    didParseCell: function (data) {
+                        if (data.section === 'body' && data.cell.raw === 'VAGO') {
+                            data.cell.styles.textColor = [225, 29, 72];
+                            data.cell.styles.fontStyle = 'bold';
+                        }
+                    }
+                });
+
+                // Rodapé com orientação e versículo
+                const finalY = doc.lastAutoTable.finalY + 8;
+                doc.setFont('helvetica', 'italic');
+                doc.setFontSize(8.5);
+                doc.setTextColor(100, 116, 139);
+                doc.text('"Mas que todas as coisas ocorram com decência e ordem." — 1 Coríntios 14:40', 14, finalY);
+                doc.text('Obs.: Chegar com 20 minutos de antecedência.', 283, finalY, { align: 'right' });
+
+                // Download direto do arquivo PDF
+                const safeFileName = `Designacoes_${monthNames[state.schedule.month]}_${state.schedule.year}.pdf`;
+                doc.save(safeFileName);
+                showToast(`PDF "${docTitle}" baixado com sucesso!`, 'success');
+            } catch (err) {
+                console.error('Erro ao gerar PDF:', err);
+                showToast('Falha ao gerar arquivo PDF. Tentando impressão...', 'error');
+                window.print();
+            }
+        }
+
+        function openBrotherModal(id = null) {
+            checkAdminAuth(() => {
+                const modal = document.getElementById('modal-brother');
+                const title = document.getElementById('modal-brother-title');
+                const checkboxesContainer = document.getElementById('brother-roles-checkboxes');
+                
+                checkboxesContainer.innerHTML = state.roles.map(r => `
+                    <label class="inline-flex items-center text-xs text-slate-700 cursor-pointer">
+                        <input type="checkbox" value="${r.id}" class="brother-role-cb rounded text-indigo-600 focus:ring-indigo-500">
+                        <span class="ml-1.5 truncate">${escapeHtml(r.name)}</span>
+                    </label>
+                `).join('');
+
+                if (id) {
+                    const brother = state.brothers.find(b => b.id === id);
+                    if (!brother) return;
+
+                    title.textContent = 'Editar Irmão';
+                    document.getElementById('brother-id').value = brother.id;
+                    document.getElementById('brother-name').value = brother.name;
+                    document.getElementById('brother-phone').value = brother.phone || '';
+                    document.getElementById('brother-restrictions').value = brother.restrictions || '';
+                    document.getElementById('brother-shift-enabled').checked = !!brother.shift12x36;
+                    document.getElementById('brother-shift-ref').value = brother.shiftRefDate || '2026-08-12';
+                    document.getElementById('brother-shift-scope').value = brother.shiftScope || 'audio';
+
+                    document.querySelectorAll('.brother-role-cb').forEach(cb => {
+                        cb.checked = brother.roles.includes(cb.value);
+                    });
+                } else {
+                    title.textContent = 'Cadastrar Irmão';
+                    document.getElementById('brother-id').value = '';
+                    document.getElementById('brother-name').value = '';
+                    document.getElementById('brother-phone').value = '';
+                    document.getElementById('brother-restrictions').value = '';
+                    document.getElementById('brother-shift-enabled').checked = false;
+                    document.getElementById('brother-shift-ref').value = '2026-08-12';
+                    document.getElementById('brother-shift-scope').value = 'audio';
+
+                    document.querySelectorAll('.brother-role-cb').forEach(cb => {
+                        cb.checked = cb.value !== 'r5';
+                    });
+                }
+
+                toggleShiftFields();
+                modal.classList.remove('hidden');
+            });
+        }
+
+        function closeBrotherModal() {
+            document.getElementById('modal-brother').classList.add('hidden');
+        }
+
+        function saveBrother() {
+            const id = document.getElementById('brother-id').value;
+            const name = document.getElementById('brother-name').value.trim();
+            const phone = document.getElementById('brother-phone').value.trim().replace(/\D/g, '');
+            const restrictions = document.getElementById('brother-restrictions').value.trim();
+            const shift12x36 = document.getElementById('brother-shift-enabled').checked;
+            const shiftRefDate = document.getElementById('brother-shift-ref').value;
+            const shiftScope = document.getElementById('brother-shift-scope').value;
+
+            if (!name) {
+                showToast('Por favor, digite o nome do irmão.', 'warning');
+                return;
+            }
+
+            const selectedRoles = Array.from(document.querySelectorAll('.brother-role-cb:checked'))
+                .map(cb => cb.value);
+
+            const brotherData = {
+                name,
+                phone,
+                roles: selectedRoles,
+                restrictions,
+                shift12x36,
+                shiftRefDate,
+                shiftScope
+            };
+
+            if (id) {
+                const index = state.brothers.findIndex(b => b.id === id);
+                if (index !== -1) {
+                    state.brothers[index] = { id, ...brotherData };
+                }
+                showToast('Cadastro atualizado!', 'success');
+            } else {
+                state.brothers.push({
+                    id: 'b_' + Date.now(),
+                    ...brotherData
+                });
+                state.brothers.sort((a, b) => a.name.localeCompare(b.name));
+                showToast('Irmão cadastrado com sucesso!', 'success');
+            }
+
+            persistState();
+            closeBrotherModal();
+            renderBrothersList();
+            renderRolesGrid();
+            renderScheduleTable();
+        }
+
+        function editBrother(id) {
+            openBrotherModal(id);
+        }
+
+        function deleteBrother(id) {
+            checkAdminAuth(() => {
+                const brother = state.brothers.find(b => b.id === id);
+                showConfirmDialog(
+                    'Remover Irmão',
+                    `Deseja realmente remover ${brother ? brother.name : 'este irmão'} da lista?`,
+                    () => {
+                        state.brothers = state.brothers.filter(b => b.id !== id);
+                        persistState();
+                        renderBrothersList();
+                        renderRolesGrid();
+                        showToast('Irmão removido.', 'info');
+                    }
+                );
+            });
+        }
+
+        // ==========================================
+        // WHATSAPP
+        // ==========================================
+        function openWhatsAppModal() {
+            if (!state.schedule) {
+                showToast('Gere uma escala primeiro para enviar mensagens.', 'warning');
+                return;
+            }
+
+            buildWhatsAppGroupText();
+            buildWhatsAppIndividualList();
+
+            document.getElementById('modal-whatsapp').classList.remove('hidden');
+            switchWaTab('group');
+            lucide.createIcons();
+        }
+
+        function closeWhatsAppModal() {
+            document.getElementById('modal-whatsapp').classList.add('hidden');
+        }
+
+        function switchWaTab(tab) {
+            const btnGroup = document.getElementById('wa-tab-group');
+            const btnIndividual = document.getElementById('wa-tab-individual');
+            const contentGroup = document.getElementById('wa-content-group');
+            const contentIndividual = document.getElementById('wa-content-individual');
+
+            if (tab === 'group') {
+                btnGroup.className = "pb-2 border-b-2 border-green-600 text-green-700 font-bold flex items-center gap-1.5";
+                btnIndividual.className = "pb-2 border-b-2 border-transparent text-slate-500 hover:text-slate-800 flex items-center gap-1.5";
+                contentGroup.classList.remove('hidden');
+                contentIndividual.classList.add('hidden');
+            } else {
+                btnIndividual.className = "pb-2 border-b-2 border-green-600 text-green-700 font-bold flex items-center gap-1.5";
+                btnGroup.className = "pb-2 border-b-2 border-transparent text-slate-500 hover:text-slate-800 flex items-center gap-1.5";
+                contentIndividual.classList.remove('hidden');
+                contentGroup.classList.add('hidden');
+            }
+        }
+
+        function buildWhatsAppGroupText() {
+            const monthNames = ["JANEIRO", "FEVEREIRO", "MARÇO", "ABRIL", "MAIO", "JUNHO", "JULHO", "AGOSTO", "SETEMBRO", "OUTUBRO", "NOVEMBRO", "DEZEMBRO"];
+            const weekDays = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
+
+            let msg = `📋 *DESIGNAÇÕES TÉCNICAS - MÊS DE ${monthNames[state.schedule.month]} DE ${state.schedule.year}*\n\n`;
+
+            state.schedule.dates.forEach(d => {
+                const dateKey = d.toISOString().split('T')[0];
+                const dayStr = String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0');
+                const dayName = weekDays[d.getDay()];
+
+                msg += `📅 *${dayName.toUpperCase()} (${dayStr})*\n`;
+
+                state.roles.forEach(role => {
+                    const bId = state.schedule.grid[dateKey]?.[role.id];
+                    const b = state.brothers.find(item => item.id === bId);
+                    msg += `• *${role.name}:* ${b ? b.name : 'VAGO'}\n`;
+                });
+                msg += `\n`;
+            });
+
+            msg += `📖 _"Mas que todas as coisas ocorram com decência e ordem" (1 Coríntios 14:40)_\n`;
+            msg += `\nPor favor, cheguem com 20 minutos de antecedência. Caso necessitem trocar, avisem com antecedência. Agradecemos o apoio de todos!`;
+
+            document.getElementById('wa-group-text').value = msg;
+        }
+
+        function sendWaGroupMessage() {
+            const text = document.getElementById('wa-group-text').value;
+            const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
+            window.open(waUrl, '_blank');
+        }
+
+        function copyTextFallback(text) {
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            textarea.style.position = 'fixed';
+            textarea.style.opacity = '0';
+            document.body.appendChild(textarea);
+            textarea.select();
+            try {
+                document.execCommand('copy');
+                showToast('Texto copiado para a área de transferência!', 'success');
+            } catch (err) {
+                showToast('Não foi possível copiar automaticamente.', 'error');
+            }
+            document.body.removeChild(textarea);
+        }
+
+        function copyWaGroupText() {
+            const text = document.getElementById('wa-group-text').value;
+            copyTextFallback(text);
+        }
+
+        function buildWhatsAppIndividualList() {
+            const container = document.getElementById('wa-individual-list');
+            container.innerHTML = '';
+
+            const monthNames = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+            const weekDays = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
+
+            const brotherAssignments = {};
+
+            state.schedule.dates.forEach(d => {
+                const dateKey = d.toISOString().split('T')[0];
+                const dayStr = String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0');
+                const dayName = weekDays[d.getDay()];
+
+                state.roles.forEach(role => {
+                    const bId = state.schedule.grid[dateKey]?.[role.id];
+                    if (bId) {
+                        if (!brotherAssignments[bId]) brotherAssignments[bId] = [];
+                        brotherAssignments[bId].push({
+                            dateStr: `${dayName} (${dayStr})`,
+                            roleName: role.name
+                        });
+                    }
+                });
+            });
+
+            state.brothers.forEach(brother => {
+                const assignments = brotherAssignments[brother.id] || [];
+                if (assignments.length === 0) return;
+
+                let indMsg = `Olá, *${brother.name}*! 👋\n\n`;
+                indMsg += `Seguem suas designações para o mês de *${monthNames[state.schedule.month]}*:\n\n`;
+
+                assignments.forEach(a => {
+                    indMsg += `📅 *${a.dateStr}* → ${a.roleName}\n`;
+                });
+
+                indMsg += `\nContamos com sua ajuda! Por favor, chegue com 20min de antecedência.`;
+
+                const row = document.createElement('div');
+                row.className = 'p-3 hover:bg-white transition-colors flex items-center justify-between gap-3';
+                
+                const btn = document.createElement('button');
+                btn.className = 'px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-xs font-semibold rounded-lg flex items-center gap-1.5 shrink-0';
+                btn.innerHTML = `<i data-lucide="message-circle" class="w-3.5 h-3.5"></i> Enviar`;
+                btn.onclick = () => sendWaIndividualMessage(brother.phone || '', indMsg);
+
+                row.innerHTML = `
+                    <div class="min-w-0 flex-1">
+                        <div class="font-bold text-slate-900 text-sm flex items-center gap-2">
+                            ${escapeHtml(brother.name)}
+                            <span class="text-[10px] bg-green-100 text-green-800 px-2 py-0.5 rounded-full font-semibold">${assignments.length}x</span>
+                        </div>
+                        <div class="text-xs text-slate-500 truncate mt-0.5">
+                            ${assignments.map(a => `${a.dateStr}: ${a.roleName}`).join(' | ')}
+                        </div>
+                    </div>
+                `;
+                row.appendChild(btn);
+                container.appendChild(row);
+            });
+            lucide.createIcons();
+        }
+
+        function sendWaIndividualMessage(phone, text) {
+            const cleanPhone = phone.replace(/\D/g, '');
+            const url = cleanPhone 
+                ? `https://wa.me/${cleanPhone.startsWith('55') ? cleanPhone : '55' + cleanPhone}?text=${encodeURIComponent(text)}` 
+                : `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
+            window.open(url, '_blank');
+        }
+
+        // ==========================================
+        // FUNÇÕES DA REUNIÃO
+        // ==========================================
+        function renderRolesGrid() {
+            const grid = document.getElementById('roles-grid');
+            grid.innerHTML = '';
+
+            state.roles.forEach(role => {
+                const assignedCount = state.brothers.filter(b => b.roles.includes(role.id)).length;
+                
+                const card = document.createElement('div');
+                card.className = 'bg-white p-3.5 rounded-xl shadow-sm border border-slate-200 flex flex-col justify-between';
+                card.innerHTML = `
+                    <div>
+                        <div class="flex items-center justify-between gap-2">
+                            <h4 class="font-semibold text-sm text-slate-900 truncate" title="${escapeHtml(role.name)}">${escapeHtml(role.name)}</h4>
+                            <span class="p-1 bg-indigo-50 text-indigo-600 rounded-md shrink-0">
+                                <i data-lucide="shield-check" class="w-3.5 h-3.5"></i>
+                            </span>
+                        </div>
+                        <p class="text-[11px] text-slate-500 mt-1">${assignedCount} irmão(s) habilitado(s)</p>
+                    </div>
+                    <div class="mt-2.5 pt-2 border-t border-slate-100 flex justify-end gap-1">
+                        <button onclick="openRoleModal('${role.id}')" class="p-1 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-md transition-colors" title="Editar">
+                            <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
+                        </button>
+                        <button onclick="deleteRole('${role.id}')" class="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-md transition-colors" title="Excluir">
+                            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                        </button>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+
+            lucide.createIcons();
+        }
+
+        function openRoleModal(id = null) {
+            checkAdminAuth(() => {
+                const modal = document.getElementById('modal-role');
+                const title = document.getElementById('modal-role-title');
+
+                if (id) {
+                    const role = state.roles.find(r => r.id === id);
+                    if (!role) return;
+                    title.textContent = 'Editar Função';
+                    document.getElementById('role-id').value = role.id;
+                    document.getElementById('role-name').value = role.name;
+                } else {
+                    title.textContent = 'Cadastrar Função';
+                    document.getElementById('role-id').value = '';
+                    document.getElementById('role-name').value = '';
+                }
+
+                modal.classList.remove('hidden');
+            });
+        }
+
+        function closeRoleModal() {
+            document.getElementById('modal-role').classList.add('hidden');
+        }
+
+        function saveRole() {
+            const id = document.getElementById('role-id').value;
+            const name = document.getElementById('role-name').value.trim().toUpperCase();
+
+            if (!name) {
+                showToast('Digite o nome da função.', 'warning');
+                return;
+            }
+
+            if (id) {
+                const idx = state.roles.findIndex(r => r.id === id);
+                if (idx !== -1) state.roles[idx].name = name;
+                showToast('Função atualizada!', 'success');
+            } else {
+                const newRoleId = 'r_' + Date.now();
+                state.roles.push({ id: newRoleId, name });
+                state.brothers.forEach(b => {
+                    if (!b.roles.includes(newRoleId)) b.roles.push(newRoleId);
+                });
+                showToast('Nova função adicionada!', 'success');
+            }
+
+            persistState();
+            closeRoleModal();
+            renderRolesGrid();
+            renderScheduleTable();
+        }
+
+        function deleteRole(id) {
+            checkAdminAuth(() => {
+                showConfirmDialog(
+                    'Remover Função',
+                    'Deseja realmente remover esta função da escala?',
+                    () => {
+                        state.roles = state.roles.filter(r => r.id !== id);
+                        state.brothers.forEach(b => {
+                            b.roles = b.roles.filter(rId => rId !== id);
+                        });
+                        persistState();
+                        renderRolesGrid();
+                        renderScheduleTable();
+                        showToast('Função removida.', 'info');
+                    }
+                );
+            });
+        }
+
+        // ==========================================
+        // GERADOR DE ESCALA AUTOMÁTICA
+        // ==========================================
+        function shuffleArray(array) {
+            const arr = [...array];
+            for (let i = arr.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [arr[i], arr[j]] = [arr[j], arr[i]];
+            }
+            return arr;
+        }
+
+        function generateSchedule(bypassAuth = false) {
+            const executeGenerator = () => {
+                if (state.brothers.length === 0) {
+                    state.schedule = null;
+                    renderScheduleTable();
+                    if (!bypassAuth) {
+                        showToast('Cadastre os irmãos na aba "Irmãos" antes de gerar a escala.', 'warning');
+                        switchTab('brothers');
+                    }
+                    return;
+                }
+
+                const monthIdx = parseInt(document.getElementById('schedule-month').value);
+                const year = parseInt(document.getElementById('schedule-year').value);
+                
+                const selectedDays = Array.from(document.querySelectorAll('.meeting-day:checked'))
+                    .map(cb => parseInt(cb.value));
+
+                if (selectedDays.length === 0) {
+                    showToast('Selecione pelo menos um dia da semana.', 'warning');
+                    return;
+                }
+
+                const dates = [];
+                const daysInMonth = new Date(year, monthIdx + 1, 0).getDate();
+
+                for (let day = 1; day <= daysInMonth; day++) {
+                    const d = new Date(year, monthIdx, day);
+                    if (selectedDays.includes(d.getDay())) {
+                        dates.push(new Date(d));
+                    }
+                }
+
+                const assignmentCounts = {};
+                const roleCounts = {};
+
+                // Embaralha exclusivamente os irmãos cadastrados na aba "Irmãos"
+                const activeBrothers = shuffleArray(state.brothers);
+                activeBrothers.forEach(b => {
+                    assignmentCounts[b.id] = 0;
+                    roleCounts[b.id] = {};
+                });
+
+                const scheduleResult = {
+                    month: monthIdx,
+                    year: year,
+                    dates: dates,
+                    grid: {}
+                };
+
+                let lastMeetingAssigned = new Set();
+
+                dates.forEach(dateObj => {
+                    const dateKey = dateObj.toISOString().split('T')[0];
+                    scheduleResult.grid[dateKey] = {};
+
+                    const assignedToday = new Set();
+
+                    // Prioriza funções com menos irmãos cadastrados habilitados (ex: Som / Áudio)
+                    const sortedRoles = [...state.roles].sort((rA, rB) => {
+                        const countA = activeBrothers.filter(b => Array.isArray(b.roles) && b.roles.includes(rA.id)).length;
+                        const countB = activeBrothers.filter(b => Array.isArray(b.roles) && b.roles.includes(rB.id)).length;
+                        return countA - countB;
+                    });
+
+                    sortedRoles.forEach(role => {
+                        // Filtra apenas irmãos cadastrados que possuam a função marcada e não tenham restrição no dia
+                        let candidates = activeBrothers.filter(b => 
+                            Array.isArray(b.roles) &&
+                            b.roles.includes(role.id) && 
+                            !assignedToday.has(b.id) && 
+                            isBrotherAvailableOnDate(b, dateObj, role.id)
+                        );
+
+                        if (candidates.length === 0) {
+                            scheduleResult.grid[dateKey][role.id] = null;
+                            return;
+                        }
+
+                        // Garante que só repete alguém quando TODOS os candidatos cadastrados e habilitados já tiverem sido escalados na rodada atual
+                        const minAssignmentsInPool = Math.min(...candidates.map(c => assignmentCounts[c.id]));
+                        let pool = candidates.filter(c => assignmentCounts[c.id] === minAssignmentsInPool);
+
+                        // Evita escalar na reunião imediatamente seguinte se houver outros no mesmo nível de rodada
+                        const notInLastMeetingPool = pool.filter(c => !lastMeetingAssigned.has(c.id));
+                        if (notInLastMeetingPool.length > 0) {
+                            pool = notInLastMeetingPool;
+                        }
+
+                        // Evita repetir exatamente a mesma função para o mesmo irmão se houver opção no mesmo nível
+                        const minRoleCount = Math.min(...pool.map(c => roleCounts[c.id][role.id] || 0));
+                        const diverseRolePool = pool.filter(c => (roleCounts[c.id][role.id] || 0) === minRoleCount);
+                        if (diverseRolePool.length > 0) {
+                            pool = diverseRolePool;
+                        }
+
+                        // Sorteia aleatoriamente dentro do grupo empatado com menos designações
+                        const chosen = pool[Math.floor(Math.random() * pool.length)];
+
+                        scheduleResult.grid[dateKey][role.id] = chosen.id;
+                        assignedToday.add(chosen.id);
+                        assignmentCounts[chosen.id]++;
+                        roleCounts[chosen.id][role.id] = (roleCounts[chosen.id][role.id] || 0) + 1;
+                    });
+
+                    lastMeetingAssigned = assignedToday;
+                });
+
+                state.schedule = scheduleResult;
+                persistState();
+                renderScheduleTable();
+                renderStats();
+                if (!bypassAuth) {
+                    showToast(`Escala gerada com os ${activeBrothers.length} irmãos cadastrados!`, 'success');
+                }
+            };
+
+            if (bypassAuth) {
+                executeGenerator();
+            } else {
+                checkAdminAuth(executeGenerator);
+            }
+        }
+
+        function renderScheduleTable() {
+            const thead = document.getElementById('schedule-thead');
+            const tbody = document.getElementById('schedule-tbody');
+
+            if (!state.schedule) {
+                thead.innerHTML = '';
+                tbody.innerHTML = `
+                    <tr>
+                        <td class="py-10 px-4 text-center text-slate-500 text-sm">
+                            Nenhum irmão cadastrado. Acesse a aba <strong>"Irmãos"</strong> para cadastrar os participantes e depois clique em <strong>"Gerar Nova Escala"</strong>.
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            const monthNames = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+            const weekDays = ["DOMINGO", "SEGUNDA", "TERÇA", "QUARTA", "QUINTA", "SEXTA", "SÁBADO"];
+
+            document.getElementById('schedule-title').textContent = `Designações - ${monthNames[state.schedule.month]} e ${state.schedule.year}`;
+
+            thead.innerHTML = '';
+            tbody.innerHTML = '';
+
+            const headerRow = document.createElement('tr');
+            headerRow.className = 'border-b border-slate-300 bg-slate-100 text-slate-800 font-bold';
+            headerRow.innerHTML = `<th class="py-3 px-3 text-left w-36 border-r border-slate-200">DIA / DATA</th>`;
+
+            state.roles.forEach(role => {
+                headerRow.innerHTML += `
+                    <th class="py-3 px-3 text-center border-r border-slate-200 min-w-[140px] uppercase font-bold text-slate-800">
+                        ${escapeHtml(role.name)}
+                    </th>
+                `;
+            });
+            thead.appendChild(headerRow);
+
+            state.schedule.dates.forEach(d => {
+                const dateKey = d.toISOString().split('T')[0];
+                const dayNum = String(d.getDate()).padStart(2, '0');
+                const monthNum = String(d.getMonth() + 1).padStart(2, '0');
+                const weekName = weekDays[d.getDay()].substring(0, 6);
+
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-indigo-50/50 border-b border-slate-200 text-slate-800 text-xs sm:text-sm font-medium transition-colors';
+
+                let rowHtml = `
+                    <td class="py-3 px-3 bg-slate-50 font-bold border-r border-slate-200 text-slate-900">
+                        <div class="flex items-center justify-between gap-2">
+                            <span>${weekName}</span>
+                            <span class="text-indigo-700 bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-100 text-xs">${dayNum}/${monthNum}</span>
+                        </div>
+                    </td>
+                `;
+
+                state.roles.forEach(role => {
+                    const brotherId = state.schedule.grid[dateKey]?.[role.id];
+                    const brother = state.brothers.find(b => b.id === brotherId);
+                    const nameText = brother ? escapeHtml(brother.name) : '<span class="text-rose-500 font-bold italic">VAGO</span>';
+
+                    rowHtml += `
+                        <td onclick="openSwapModal('${dateKey}', '${role.id}', '${brotherId || ''}')" 
+                            class="py-3 px-3 text-center border-r border-slate-200 cursor-pointer hover:bg-indigo-100/70 transition-colors group relative"
+                            title="Clique para alterar">
+                            <span>${nameText}</span>
+                            <i data-lucide="edit-2" class="w-3 h-3 text-indigo-500 opacity-0 group-hover:opacity-100 inline ml-1 no-print"></i>
+                        </td>
+                    `;
+                });
+
+                tr.innerHTML = rowHtml;
+                tbody.appendChild(tr);
+            });
+
+            lucide.createIcons();
+        }
+
+        function renderStats() {
+            const container = document.getElementById('stats-container');
+            container.innerHTML = '';
+
+            if (!state.schedule) return;
+
+            const counts = {};
+            state.brothers.forEach(b => counts[b.id] = 0);
+
+            Object.values(state.schedule.grid).forEach(dayObj => {
+                Object.values(dayObj).forEach(bId => {
+                    if (bId && counts[bId] !== undefined) counts[bId]++;
+                });
+            });
+
+            const maxCount = Math.max(...Object.values(counts), 1);
+            const sortedEntries = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+
+            sortedEntries.forEach(([bId, count]) => {
+                const brother = state.brothers.find(b => b.id === bId);
+                if (!brother) return;
+
+                const pct = Math.round((count / maxCount) * 100);
+                const card = document.createElement('div');
+                card.className = 'bg-slate-50 p-3 rounded-lg border border-slate-200 flex flex-col justify-between';
+                card.innerHTML = `
+                    <div class="text-xs font-semibold text-slate-800 truncate" title="${escapeHtml(brother.name)}">${escapeHtml(brother.name)}</div>
+                    <div class="mt-2 flex items-baseline justify-between">
+                        <span class="text-lg font-bold text-indigo-600">${count}</span>
+                        <span class="text-[10px] text-slate-500">designações</span>
+                    </div>
+                    <div class="w-full bg-slate-200 h-1.5 rounded-full mt-1.5 overflow-hidden">
+                        <div class="bg-indigo-600 h-full rounded-full" style="width: ${pct}%"></div>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        // ==========================================
+        // TROCA MANUAL & ESTATÍSTICAS
+        // ==========================================
+        function openSwapModal(dateKey, roleId, currentBrotherId) {
+            checkAdminAuth(() => {
+                currentSwapTarget = { dateKey, roleId, currentBrotherId };
+
+                const dateObj = new Date(dateKey + 'T00:00:00');
+                const role = state.roles.find(r => r.id === roleId);
+                const select = document.getElementById('swap-select');
+
+                document.getElementById('swap-subtitle').textContent = 
+                    `${role?.name || 'Função'} - ${dateObj.toLocaleDateString('pt-BR')}`;
+
+                select.innerHTML = '<option value="">-- VAGO (Ninguém) --</option>';
+
+                const assignedOtherRoles = new Set();
+                Object.entries(state.schedule.grid[dateKey] || {}).forEach(([rId, bId]) => {
+                    if (rId !== roleId && bId) assignedOtherRoles.add(bId);
+                });
+
+                state.brothers.forEach(b => {
+                    const isBusy = assignedOtherRoles.has(b.id);
+                    const isAvailable = isBrotherAvailableOnDate(b, dateObj, roleId);
+
+                    let statusTag = '';
+                    if (isBusy) {
+                        statusTag = ' (Já escalado hoje)';
+                    } else if (!isAvailable) {
+                        statusTag = ' (Plantão 12x36)';
+                    }
+
+                    const option = document.createElement('option');
+                    option.value = b.id;
+                    option.textContent = `${b.name}${statusTag}`;
+                    if (b.id === currentBrotherId) option.selected = true;
+
+                    select.appendChild(option);
+                });
+
+                document.getElementById('modal-swap').classList.remove('hidden');
+                lucide.createIcons();
+            });
+        }
+
+        function closeSwapModal() {
+            document.getElementById('modal-swap').classList.add('hidden');
+            currentSwapTarget = null;
+        }
+
+        function openStatsModal() {
+            renderStats();
+            document.getElementById('modal-stats').classList.remove('hidden');
+            lucide.createIcons();
+        }
+
+        function closeStatsModal() {
+            document.getElementById('modal-stats').classList.add('hidden');
+        }
+
+        function confirmSwap() {
+            if (!currentSwapTarget || !state.schedule) return;
+
+            const newBrotherId = document.getElementById('swap-select').value || null;
+            const { dateKey, roleId } = currentSwapTarget;
+
+            state.schedule.grid[dateKey][roleId] = newBrotherId;
+            persistState();
+
+            closeSwapModal();
+            renderScheduleTable();
+            renderStats();
+            showToast('Designação atualizada!', 'success');
+        }
+
+        // ==========================================
+        // CONFIGURAÇÕES, BACKUP & INTELIGÊNCIA ARTIFICIAL
+        // ==========================================
+        function getEffectiveApiKey() {
+            return state.customApiKey || "";
+        }
+
+        function openApiKeyModal() {
+            document.getElementById('user-admin-password').value = '';
+            document.getElementById('modal-api-key').classList.remove('hidden');
+            lucide.createIcons();
+        }
+
+        function closeApiKeyModal() {
+            document.getElementById('modal-api-key').classList.add('hidden');
+        }
+
+        function saveApiKey() {
+            const pass = document.getElementById('user-admin-password').value.trim();
+
+            if (pass) {
+                state.adminPassword = pass;
+                localStorage.setItem(STORAGE_KEYS.ADMIN_PASS, pass);
+            }
+
+            closeApiKeyModal();
+            showToast('Configurações salvas com sucesso!', 'success');
+        }
+
+        function exportBackup() {
+            const data = {
+                roles: state.roles,
+                brothers: state.brothers,
+                schedule: state.schedule
+            };
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `backup-designacoes-${new Date().toISOString().slice(0,10)}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast('Arquivo de backup exportado!', 'success');
+        }
+
+        function importBackup(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const parsed = JSON.parse(e.target.result);
+                    if (parsed.roles && parsed.brothers) {
+                        state.roles = parsed.roles;
+                        state.brothers = parsed.brothers;
+                        if (parsed.schedule) {
+                            parsed.schedule.dates = parsed.schedule.dates.map(iso => new Date(iso));
+                            state.schedule = parsed.schedule;
+                        }
+                        persistState();
+                        renderBrothersList();
+                        renderRolesGrid();
+                        renderScheduleTable();
+                        renderStats();
+                        closeApiKeyModal();
+                        showToast('Backup restaurado com sucesso!', 'success');
+                    } else {
+                        showToast('Arquivo JSON inválido.', 'error');
+                    }
+                } catch (err) {
+                    showToast('Erro ao ler arquivo de backup.', 'error');
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function showAiOutputBox(title) {
+            switchTab('ai-assistant');
+            const card = document.getElementById('ai-output-card');
+            const titleEl = document.getElementById('ai-output-title');
+            const spinner = document.getElementById('ai-loading-spinner');
+            const textContainer = document.getElementById('ai-output-text-container');
+            const audioContainer = document.getElementById('ai-audio-player-container');
+            const imageContainer = document.getElementById('ai-image-container');
+
+            titleEl.innerHTML = `<i data-lucide="sparkles" class="w-5 h-5 text-indigo-600"></i> ${title}`;
+            card.classList.remove('hidden');
+            spinner.classList.remove('hidden');
+            textContainer.classList.add('hidden');
+            audioContainer.classList.add('hidden');
+            imageContainer.classList.add('hidden');
+
+            lucide.createIcons();
+            card.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        async function runAiAnalysis() {
+            if (!state.schedule) {
+                showToast('Gere uma escala primeiro para analisá-la.', 'warning');
+                return;
+            }
+
+            const apiKey = getEffectiveApiKey();
+            if (!apiKey) {
+                showToast('Configure sua Chave API do Gemini nas configurações primeiro.', 'warning');
+                openApiKeyModal();
+                return;
+            }
+
+            showAiOutputBox('Análise Crítica da Escala com IA');
+
+            const monthNames = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+            
+            let summaryText = `Mês: ${monthNames[state.schedule.month]} / ${state.schedule.year}\n`;
+            summaryText += `Total de reuniões no mês: ${state.schedule.dates.length}\n`;
+            summaryText += `Lista de Irmãos (${state.brothers.length} total):\n`;
+            
+            const counts = {};
+            state.brothers.forEach(b => counts[b.name] = 0);
+
+            state.schedule.dates.forEach(d => {
+                const dateKey = d.toISOString().split('T')[0];
+                Object.values(state.schedule.grid[dateKey] || {}).forEach(bId => {
+                    const b = state.brothers.find(item => item.id === bId);
+                    if (b) counts[b.name]++;
+                });
+            });
+
+            Object.entries(counts).forEach(([name, count]) => {
+                summaryText += `- ${name}: ${count} designações\n`;
+            });
+
+            const systemPrompt = "Você é um assistente atencioso especializado em organização de reuniões congregacionais. Analise a escala gerada de forma fraterna e construtiva. Destaque o equilíbrio da distribuição e dê dicas úteis.";
+            const userPrompt = `Por favor, faça um diagnóstico resumido e amigável da seguinte escala:\n${summaryText}`;
+
+            try {
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: userPrompt }] }],
+                        systemInstruction: { parts: [{ text: systemPrompt }] }
+                    })
+                });
+
+                const result = await response.json();
+                if (result.error) throw new Error(result.error.message);
+
+                const aiText = result.candidates?.[0]?.content?.parts?.[0]?.text || "Análise concluída com sucesso.";
+
+                lastAiTextResponse = aiText;
+                document.getElementById('ai-loading-spinner').classList.add('hidden');
+                const textContainer = document.getElementById('ai-output-text-container');
+                textContainer.innerHTML = escapeHtml(aiText);
+                textContainer.classList.remove('hidden');
+
+            } catch (err) {
+                document.getElementById('ai-loading-spinner').classList.add('hidden');
+                showToast('Erro na API Gemini: ' + err.message, 'error');
+            }
+        }
+
+        async function generateAudioSummary() {
+            if (!state.schedule) {
+                showToast('Gere uma escala primeiro para criar o áudio.', 'warning');
+                return;
+            }
+
+            const apiKey = getEffectiveApiKey();
+            if (!apiKey) {
+                showToast('Configure sua Chave API do Gemini nas configurações primeiro.', 'warning');
+                openApiKeyModal();
+                return;
+            }
+
+            showAiOutputBox('Leitor de Áudio em Voz Alta (Gemini TTS)');
+
+            const monthNames = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+            const textToSpeak = `Saudações aos irmãos. Segue o resumo das designações técnicas do mês de ${monthNames[state.schedule.month]}. Lembre-se de verificar suas datas e chegar com vinte minutos de antecedência. Agradecemos a colaboração de todos.`;
+
+            try {
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`;
+
+                const payload = {
+                    contents: [{ parts: [{ text: "Diga com voz clara e agradável: " + textToSpeak }] }],
+                    generationConfig: {
+                        responseModalities: ["AUDIO"],
+                        speechConfig: {
+                            voiceConfig: { prebuiltVoiceConfig: { voiceName: "Kore" } }
+                        }
+                    }
+                };
+
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const result = await response.json();
+                if (result.error) throw new Error(result.error.message);
+
+                const part = result?.candidates?.[0]?.content?.parts?.[0];
+                const base64Audio = part?.inlineData?.data;
+                const mimeType = part?.inlineData?.mimeType;
+
+                if (base64Audio && mimeType) {
+                    const sampleRateMatch = mimeType.match(/rate=(\d+)/);
+                    const sampleRate = sampleRateMatch ? parseInt(sampleRateMatch[1], 10) : 24000;
+                    
+                    const pcm16Data = base64ToArrayBuffer(base64Audio);
+                    const pcm16Array = new Int16Array(pcm16Data);
+                    const wavBlob = pcmToWav(pcm16Array, sampleRate);
+                    const audioUrl = URL.createObjectURL(wavBlob);
+
+                    document.getElementById('ai-loading-spinner').classList.add('hidden');
+                    const audioPlayer = document.getElementById('ai-audio-player');
+                    audioPlayer.src = audioUrl;
+                    
+                    const audioContainer = document.getElementById('ai-audio-player-container');
+                    audioContainer.classList.remove('hidden');
+                    
+                    audioPlayer.play().catch(() => {});
+                } else {
+                    throw new Error('Sem áudio recebido.');
+                }
+
+            } catch (err) {
+                document.getElementById('ai-loading-spinner').classList.add('hidden');
+                showToast('Erro ao gerar áudio: ' + err.message, 'error');
+            }
+        }
+
+        async function generateAiBanner() {
+            const apiKey = getEffectiveApiKey();
+            if (!apiKey) {
+                showToast('Configure sua Chave API do Gemini nas configurações primeiro.', 'warning');
+                openApiKeyModal();
+                return;
+            }
+
+            showAiOutputBox('Gerador de Banner Temático (Imagen 4.0)');
+
+            const prompt = "A serene, elegant, spiritual header background image depicting an open bible on a clean podium, peaceful soft golden lighting, architectural harmony, high resolution photograph.";
+
+            try {
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict?key=${apiKey}`;
+
+                const payload = {
+                    instances: [{ prompt: prompt }],
+                    parameters: { sampleCount: 1 }
+                };
+
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const result = await response.json();
+                if (result.error) throw new Error(result.error.message);
+
+                const base64Bytes = result?.predictions?.[0]?.bytesBase64Encoded;
+
+                if (base64Bytes) {
+                    const imageUrl = `data:image/png;base64,${base64Bytes}`;
+                    
+                    document.getElementById('ai-loading-spinner').classList.add('hidden');
+                    
+                    const imgEl = document.getElementById('ai-generated-image');
+                    imgEl.src = imageUrl;
+                    document.getElementById('ai-image-container').classList.remove('hidden');
+
+                    const bannerContainer = document.getElementById('ai-banner-container');
+                    const bannerImg = document.getElementById('ai-banner-img');
+                    const bannerCaption = document.getElementById('ai-banner-caption');
+
+                    bannerImg.src = imageUrl;
+                    bannerCaption.textContent = '1 Coríntios 14:40 — "Mas que todas as coisas ocorram com decência e ordem"';
+                    bannerContainer.classList.remove('hidden');
+                    showToast('Banner aplicado ao topo da escala!', 'success');
+
+                } else {
+                    throw new Error('Erro ao gerar imagem.');
+                }
+
+            } catch (err) {
+                document.getElementById('ai-loading-spinner').classList.add('hidden');
+                showToast('Erro ao gerar banner: ' + err.message, 'error');
+            }
+        }
+
+        function base64ToArrayBuffer(base64) {
+            const binaryString = atob(base64);
+            const len = binaryString.length;
+            const bytes = new Uint8Array(len);
+            for (let i = 0; i < len; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+            }
+            return bytes.buffer;
+        }
+
+        function pcmToWav(pcm16Array, sampleRate) {
+            const buffer = new ArrayBuffer(44 + pcm16Array.length * 2);
+            const view = new DataView(buffer);
+
+            writeString(view, 0, 'RIFF');
+            view.setUint32(4, 36 + pcm16Array.length * 2, true);
+            writeString(view, 8, 'WAVE');
+            writeString(view, 12, 'fmt ');
+            view.setUint32(16, 16, true);
+            view.setUint16(20, 1, true);
+            view.setUint16(22, 1, true);
+            view.setUint32(24, sampleRate, true);
+            view.setUint32(28, sampleRate * 2, true);
+            view.setUint16(32, 2, true);
+            view.setUint16(34, 16, true);
+            writeString(view, 36, 'data');
+            view.setUint32(40, pcm16Array.length * 2, true);
+
+            let offset = 44;
+            for (let i = 0; i < pcm16Array.length; i++) {
+                view.setInt16(offset, pcm16Array[i], true);
+                offset += 2;
+            }
+
+            return new Blob([buffer], { type: 'audio/wav' });
+        }
+
+        function writeString(view, offset, string) {
+            for (let i = 0; i < string.length; i++) {
+                view.setUint8(offset + i, string.charCodeAt(i));
+            }
+        }
+
+        function copyAiOutputText() {
+            if (!lastAiTextResponse) return;
+            copyTextFallback(lastAiTextResponse);
+        }
+
+        function escapeHtml(str) {
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
+        }
+    </script>
+</body>
+</html>
