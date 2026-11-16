@@ -1,0 +1,26 @@
+{
+"name": "Designações - Organização de Reuniões",
+"short_name": "Designações",
+"description": "Sistema de geração e gerenciamento de designações mensais de reuniões.",
+"start_url": "./index.html",
+"scope": "./",
+"display": "standalone",
+"orientation": "any",
+"background_color": "#f8fafc",
+"theme_color": "#312e81",
+"lang": "pt-BR",
+"icons": [
+{
+"src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='110' fill='%23312e81'/%3E%3Crect x='112' y='140' width='288' height='260' rx='28' fill='%23ffffff'/%3E%3Cpath d='M112 140 h288 v72 h-288 Z' fill='%234f46e5'/%3E%3Crect x='170' y='100' width='28' height='60' rx='14' fill='%23fbbf24'/%3E%3Crect x='314' y='100' width='28' height='60' rx='14' fill='%23fbbf24'/%3E%3Crect x='160' y='252' width='192' height='18' rx='9' fill='%2394a3b8'/%3E%3Crect x='160' y='296' width='192' height='18' rx='9' fill='%23cbd5e1'/%3E%3Crect x='160' y='340' width='120' height='18' rx='9' fill='%23cbd5e1'/%3E%3C/svg%3E",
+"sizes": "192x192",
+"type": "image/svg+xml",
+"purpose": "any maskable"
+},
+{
+"src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='110' fill='%23312e81'/%3E%3Crect x='112' y='140' width='288' height='260' rx='28' fill='%23ffffff'/%3E%3Cpath d='M112 140 h288 v72 h-288 Z' fill='%234f46e5'/%3E%3Crect x='170' y='100' width='28' height='60' rx='14' fill='%23fbbf24'/%3E%3Crect x='314' y='100' width='28' height='60' rx='14' fill='%23fbbf24'/%3E%3Crect x='160' y='252' width='192' height='18' rx='9' fill='%2394a3b8'/%3E%3Crect x='160' y='296' width='192' height='18' rx='9' fill='%23cbd5e1'/%3E%3Crect x='160' y='340' width='120' height='18' rx='9' fill='%23cbd5e1'/%3E%3C/svg%3E",
+"sizes": "512x512",
+"type": "image/svg+xml",
+"purpose": "any maskable"
+}
+]
+}
